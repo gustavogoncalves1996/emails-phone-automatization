@@ -9,6 +9,7 @@ import {
   Settings2,
   ChevronDown,
   ChevronUp,
+  Zap,
 } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -24,6 +25,7 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
   const [filterStatus, setFilterStatus] = useState('all'); // all | com | sem
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showModal, setShowModal] = useState(false);
+  const [modalQuickMode, setModalQuickMode] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [templates, setTemplates] = useState({ ...DEFAULT_TEMPLATES });
 
@@ -81,6 +83,13 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
 
   const handleStartSequence = () => {
     if (selectedIds.size === 0) return;
+    setModalQuickMode(false);
+    setShowModal(true);
+  };
+
+  const handleStartQuickSend = () => {
+    if (selectedIds.size === 0) return;
+    setModalQuickMode(true);
     setShowModal(true);
   };
 
@@ -254,18 +263,33 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
             ))}
           </div>
 
-          <button
-            onClick={handleStartSequence}
-            disabled={selectedIds.size === 0}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-              selectedIds.size > 0
-                ? 'bg-green-500 hover:bg-green-600 text-white'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            <Send size={15} />
-            Iniciar Sequência ({selectedIds.size})
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleStartSequence}
+              disabled={selectedIds.size === 0}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                selectedIds.size > 0
+                  ? 'bg-green-500 hover:bg-green-600 text-white'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Send size={15} />
+              Sequência ({selectedIds.size})
+            </button>
+
+            <button
+              onClick={handleStartQuickSend}
+              disabled={selectedIds.size === 0}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                selectedIds.size > 0
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Zap size={15} />
+              Envio Rápido ({selectedIds.size})
+            </button>
+          </div>
         </div>
       </div>
 
@@ -449,13 +473,14 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
         )}
       </div>
 
-      {/* Modal de envio sequencial */}
+      {/* Modal de envio sequencial / rápido */}
       {showModal && (
         <SendModal
           leads={selectedLeads}
           templates={templates}
           onClose={() => setShowModal(false)}
           onMarkSent={onMarkSent}
+          quickMode={modalQuickMode}
         />
       )}
     </div>
