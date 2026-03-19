@@ -10,6 +10,8 @@ import {
   ChevronDown,
   ChevronUp,
   Zap,
+  Mail,
+  MailCheck,
 } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -17,17 +19,33 @@ import {
   generateWhatsAppMessage,
   generateWhatsAppLink,
   DEFAULT_TEMPLATES,
+  DEFAULT_EMAIL_TEMPLATES,
+  BUSINESS_TYPES,
+  isValidEmail,
 } from '../utils/leadUtils';
 import SendModal from './SendModal';
+import EmailModal from './EmailModal';
 
-export default function LeadsTable({ leads, sentIds, onMarkSent }) {
+export default function LeadsTable({ leads, sentIds, emailSentIds, onMarkSent, onMarkEmailSent }) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all | com | sem
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showModal, setShowModal] = useState(false);
   const [modalQuickMode, setModalQuickMode] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailModalQuickMode, setEmailModalQuickMode] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [businessTypeId, setBusinessTypeId] = useState('generico');
   const [templates, setTemplates] = useState({ ...DEFAULT_TEMPLATES });
+  const [emailTemplates, setEmailTemplates] = useState({ ...DEFAULT_EMAIL_TEMPLATES });
+
+  // Ao mudar tipo de negócio, carregar os templates correspondentes
+  const handleBusinessTypeChange = (id) => {
+    setBusinessTypeId(id);
+    const bt = BUSINESS_TYPES.find((b) => b.id === id) || BUSINESS_TYPES[0];
+    setTemplates({ ...bt.whatsapp });
+    setEmailTemplates({ ...bt.email });
+  };
 
   const filteredLeads = leads.filter((lead) => {
     const status = getLeadStatus(lead.website);
@@ -93,12 +111,25 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
     setShowModal(true);
   };
 
+  // Email handlers
+  const handleStartEmailSequence = () => {
+    if (selectedIds.size === 0) return;
+    setEmailModalQuickMode(false);
+    setShowEmailModal(true);
+  };
+
+  const handleStartEmailQuickSend = () => {
+    if (selectedIds.size === 0) return;
+    setEmailModalQuickMode(true);
+    setShowEmailModal(true);
+  };
+
   const selectedLeads = leads.filter((l) => selectedIds.has(l._id));
 
   return (
     <div className="space-y-4">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -151,14 +182,30 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-                Enviados
+                WhatsApp
               </p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">
+              <p className="text-2xl font-bold text-green-600 mt-1">
                 {sentIds.size}
               </p>
             </div>
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-              <Send size={18} className="text-blue-600" />
+            <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+              <Send size={18} className="text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+                Emails
+              </p>
+              <p className="text-2xl font-bold text-purple-600 mt-1">
+                {emailSentIds.size}
+              </p>
+            </div>
+            <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+              <MailCheck size={18} className="text-purple-600" />
             </div>
           </div>
         </div>
@@ -175,8 +222,8 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
             <span className="text-sm font-medium text-gray-700">
               Templates de Mensagens
             </span>
-            <span className="text-xs text-gray-400">
-              (variáveis: {'{{nome}}'}, {'{{website}}'})
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+              {BUSINESS_TYPES.find((b) => b.id === businessTypeId)?.label || 'Genérico'}
             </span>
           </div>
           {showTemplates ? (
@@ -188,10 +235,40 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
 
         {showTemplates && (
           <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4">
+
+            {/* Dropdown tipo de negócio */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Tipo de Negócio
+              </label>
+              <select
+                value={businessTypeId}
+                onChange={(e) => handleBusinessTypeChange(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+              >
+                {BUSINESS_TYPES.map((bt) => (
+                  <option key={bt.id} value={bt.id}>
+                    {bt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                Ao mudar o tipo, os templates de WhatsApp e Email serão atualizados automaticamente.
+              </p>
+            </div>
+
+            {/* Separador visual */}
+            <div className="border-t border-gray-200 pt-3">
+              <p className="text-xs font-semibold text-green-700 mb-3 flex items-center gap-1.5">
+                <MessageCircle size={13} />
+                Templates WhatsApp
+              </p>
+            </div>
+
             <div>
               <label className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 mb-1.5">
                 <Globe size={12} />
-                Template — Com Website
+                WhatsApp — Com Website
               </label>
               <textarea
                 value={templates.comWebsite}
@@ -205,7 +282,7 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
             <div>
               <label className="flex items-center gap-1.5 text-xs font-medium text-amber-700 mb-1.5">
                 <GlobeOff size={12} />
-                Template — Sem Website
+                WhatsApp — Sem Website
               </label>
               <textarea
                 value={templates.semWebsite}
@@ -216,12 +293,68 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            <button
-              onClick={() => setTemplates({ ...DEFAULT_TEMPLATES })}
-              className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer"
-            >
-              Restaurar templates originais
-            </button>
+
+            {/* Separador — Email */}
+            <div className="border-t border-gray-200 pt-4 mt-2">
+              <p className="text-xs font-semibold text-purple-700 mb-3 flex items-center gap-1.5">
+                <Mail size={13} />
+                Templates de Email
+              </p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">
+                    Assunto
+                  </label>
+                  <input
+                    type="text"
+                    value={emailTemplates.subject}
+                    onChange={(e) =>
+                      setEmailTemplates((t) => ({ ...t, subject: e.target.value }))
+                    }
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 mb-1.5">
+                    <Globe size={12} />
+                    Email — Com Website
+                  </label>
+                  <textarea
+                    value={emailTemplates.comWebsite}
+                    onChange={(e) =>
+                      setEmailTemplates((t) => ({ ...t, comWebsite: e.target.value }))
+                    }
+                    rows={5}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-amber-700 mb-1.5">
+                    <GlobeOff size={12} />
+                    Email — Sem Website
+                  </label>
+                  <textarea
+                    value={emailTemplates.semWebsite}
+                    onChange={(e) =>
+                      setEmailTemplates((t) => ({ ...t, semWebsite: e.target.value }))
+                    }
+                    rows={5}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Botão restaurar */}
+            <div className="border-t border-gray-100 pt-3">
+              <button
+                onClick={() => handleBusinessTypeChange(businessTypeId)}
+                className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer"
+              >
+                Restaurar templates do tipo selecionado
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -263,7 +396,7 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
             ))}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={handleStartSequence}
               disabled={selectedIds.size === 0}
@@ -274,7 +407,7 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
               }`}
             >
               <Send size={15} />
-              Sequência ({selectedIds.size})
+              WhatsApp ({selectedIds.size})
             </button>
 
             <button
@@ -287,7 +420,35 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
               }`}
             >
               <Zap size={15} />
-              Envio Rápido ({selectedIds.size})
+              WA Rápido ({selectedIds.size})
+            </button>
+
+            <div className="w-px bg-gray-200 mx-1 self-stretch" />
+
+            <button
+              onClick={handleStartEmailSequence}
+              disabled={selectedIds.size === 0}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                selectedIds.size > 0
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Mail size={15} />
+              Email ({selectedIds.size})
+            </button>
+
+            <button
+              onClick={handleStartEmailQuickSend}
+              disabled={selectedIds.size === 0}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                selectedIds.size > 0
+                  ? 'bg-purple-500 hover:bg-purple-600 text-white'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Zap size={15} />
+              Email Rápido ({selectedIds.size})
             </button>
           </div>
         </div>
@@ -323,7 +484,7 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
                   Mensagem
                 </th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Ação
+                  Ações
                 </th>
               </tr>
             </thead>
@@ -331,6 +492,9 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
               {filteredLeads.map((lead) => {
                 const status = getLeadStatus(lead.website);
                 const isSent = sentIds.has(lead._id);
+                const isEmailSent = emailSentIds.has(lead._id);
+                const hasEmail = isValidEmail(lead.email);
+                const hasPhone = Boolean(lead.numero && lead.numero.trim());
                 const message = generateWhatsAppMessage(
                   lead.nomeEmpresa,
                   lead.website,
@@ -434,27 +598,52 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
 
                     {/* Preview Mensagem */}
                     <td className="px-4 py-3">
-                      <p className="text-xs text-gray-500 truncate max-w-[260px]">
-                        {message}
+                      <p className="text-xs text-gray-500 truncate max-w-65">
+                        {hasPhone ? message : hasEmail ? `📧 ${lead.email}` : '—'}
                       </p>
                     </td>
 
-                    {/* Ação */}
+                    {/* Ações */}
                     <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => handleSendWhatsApp(lead)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                          isSent
-                            ? 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                            : 'bg-green-500 hover:bg-green-600 text-white'
-                        }`}
-                        title={
-                          isSent ? 'Reenviar via WhatsApp' : 'Enviar via WhatsApp'
-                        }
-                      >
-                        <MessageCircle size={14} />
-                        {isSent ? 'Reenviar' : 'WhatsApp'}
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        {hasPhone && (
+                          <button
+                            onClick={() => handleSendWhatsApp(lead)}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                              isSent
+                                ? 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                : 'bg-green-500 hover:bg-green-600 text-white'
+                            }`}
+                            title={
+                              isSent ? 'Reenviar via WhatsApp' : 'Enviar via WhatsApp'
+                            }
+                          >
+                            <MessageCircle size={13} />
+                            {isSent ? 'Re' : 'WA'}
+                          </button>
+                        )}
+
+                        {hasEmail && (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium ${
+                              isEmailSent
+                                ? 'bg-purple-50 text-purple-400'
+                                : 'text-gray-400'
+                            }`}
+                            title={lead.email}
+                          >
+                            {isEmailSent ? (
+                              <MailCheck size={13} />
+                            ) : (
+                              <Mail size={13} />
+                            )}
+                          </span>
+                        )}
+
+                        {!hasPhone && !hasEmail && (
+                          <span className="text-xs text-gray-300 italic">—</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -473,7 +662,7 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
         )}
       </div>
 
-      {/* Modal de envio sequencial / rápido */}
+      {/* Modal de envio sequencial / rápido (WhatsApp) */}
       {showModal && (
         <SendModal
           leads={selectedLeads}
@@ -481,6 +670,17 @@ export default function LeadsTable({ leads, sentIds, onMarkSent }) {
           onClose={() => setShowModal(false)}
           onMarkSent={onMarkSent}
           quickMode={modalQuickMode}
+        />
+      )}
+
+      {/* Modal de envio de emails */}
+      {showEmailModal && (
+        <EmailModal
+          leads={selectedLeads}
+          emailTemplates={emailTemplates}
+          onClose={() => setShowEmailModal(false)}
+          onMarkEmailSent={onMarkEmailSent}
+          quickMode={emailModalQuickMode}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
-import { Globe, GlobeOff, Users, Send } from 'lucide-react';
+import { Globe, GlobeOff, Users, Send, Mail } from 'lucide-react';
 
-export default function Header({ leadsCount, semSiteCount, enviadosCount }) {
+export default function Header({ leadsCount, semSiteCount, enviadosCount, emailEnviadosCount }) {
   return (
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -38,7 +38,13 @@ export default function Header({ leadsCount, semSiteCount, enviadosCount }) {
               <div className="flex items-center gap-1.5 bg-green-50 px-3 py-1.5 rounded-full">
                 <Send size={13} className="text-green-600" />
                 <span className="text-xs font-medium text-green-700">
-                  {enviadosCount} enviado{enviadosCount !== 1 ? 's' : ''}
+                  {enviadosCount} WA
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-purple-50 px-3 py-1.5 rounded-full">
+                <Mail size={13} className="text-purple-600" />
+                <span className="text-xs font-medium text-purple-700">
+                  {emailEnviadosCount} email{emailEnviadosCount !== 1 ? 's' : ''}
                 </span>
               </div>
             </div>

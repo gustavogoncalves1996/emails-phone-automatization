@@ -7,6 +7,7 @@ import { getLeadStatus } from './utils/leadUtils';
 function App() {
   const [leads, setLeads] = useState([]);
   const [sentIds, setSentIds] = useState(new Set());
+  const [emailSentIds, setEmailSentIds] = useState(new Set());
 
   // Adiciona _id único a cada lead ao carregar CSV
   const handleDataLoaded = useCallback((data) => {
@@ -16,10 +17,19 @@ function App() {
     }));
     setLeads(withIds);
     setSentIds(new Set());
+    setEmailSentIds(new Set());
   }, []);
 
   const handleMarkSent = useCallback((id) => {
     setSentIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleMarkEmailSent = useCallback((id) => {
+    setEmailSentIds((prev) => {
       const next = new Set(prev);
       next.add(id);
       return next;
@@ -36,6 +46,7 @@ function App() {
         leadsCount={leads.length}
         semSiteCount={semSiteCount}
         enviadosCount={sentIds.size}
+        emailEnviadosCount={emailSentIds.size}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -46,7 +57,9 @@ function App() {
             <LeadsTable
               leads={leads}
               sentIds={sentIds}
+              emailSentIds={emailSentIds}
               onMarkSent={handleMarkSent}
+              onMarkEmailSent={handleMarkEmailSent}
             />
           )}
         </div>
